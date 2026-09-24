@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  GESTAO
+  JOVEM
+}
+
+model User {
+  id         Int        @id @default(autoincrement())
+  nome       String
+  email      String     @unique
+  senhaHash  String
+  role       Role       @default(JOVEM)
+  ativo      Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  pesquisas  Pesquisa[]
+
+  @@index([role])
+  @@index([ativo])
+}
+
+model Pesquisa {
+  id            Int      @id @default(autoincrement())
+  data          DateTime
+  nome          String?
+  p1            String
+  p2            String
+  p3            String
+  p4            String
+  p5            String
+  feedback      String?
+  contato       String?
+  collectedById Int
+  createdAt     DateTime @default(now())
+  collectedBy   User     @relation(fields: [collectedById], references: [id], onDelete: Restrict)
+
+  @@index([data])
+  @@index([collectedById, data])
+  @@index([createdAt])
+}

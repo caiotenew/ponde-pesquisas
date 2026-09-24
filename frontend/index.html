@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f172a">
+  <title>Multicentro Adriano Pondé — Pesquisa de Satisfação</title>
+  <link rel="icon" href="assets/Logo_provida.png" type="image/png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800 antialiased">
+  <div id="toast-root" class="fixed right-4 top-4 z-[100] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2"></div>
+
+  <!-- Login -->
+  <main id="screen-login" class="min-h-screen p-4 sm:p-6 lg:p-10 flex items-center justify-center bg-gradient-to-br from-slate-100 via-white to-cyan-50">
+    <section class="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
+      <div class="mb-7 text-center">
+        <img src="assets/Logo_provida.png" alt="Logo" class="mx-auto mb-4 h-20 w-20 object-contain">
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-600">Pesquisa de Satisfação</p>
+        <h1 class="mt-2 text-xl font-bold text-slate-900">Multicentro Adriano Pondé</h1>
+        <p class="mt-1 text-sm text-slate-500">Portal interno de coleta e gestão</p>
+      </div>
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label for="login-email" class="mb-1.5 block text-sm font-semibold text-slate-700">E-mail corporativo</label>
+          <input id="login-email" type="email" autocomplete="username" required class="field" placeholder="seu.email@empresa.com">
+        </div>
+        <div>
+          <label for="login-senha" class="mb-1.5 block text-sm font-semibold text-slate-700">Senha</label>
+          <div class="relative">
+            <input id="login-senha" type="password" autocomplete="current-password" required class="field pr-12" placeholder="••••••••">
+            <button id="toggle-login-password" type="button" class="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-slate-400 hover:text-slate-700" aria-label="Mostrar senha">
+              <i data-lucide="eye" class="h-4 w-4"></i>
+            </button>
+          </div>
+        </div>
+        <button id="login-btn" type="submit" class="btn-primary w-full">Entrar no portal</button>
+      </form>
+    </section>
+  </main>
+
+  <!-- App -->
+  <div id="screen-app" class="hidden min-h-screen md:flex">
+    <header class="fixed inset-x-0 top-0 z-40 flex h-16 items-center justify-between bg-slate-950 px-4 text-white shadow md:hidden">
+      <div class="flex items-center gap-3">
+        <img src="assets/Logo_provida.png" alt="Logo" class="h-9 w-9 object-contain">
+        <div><p class="text-xs font-semibold">MULTICENTRO</p><p class="text-[10px] text-cyan-300">ADRIANO PONDÉ</p></div>
+      </div>
+      <button id="mobile-menu" class="rounded-lg p-2 hover:bg-slate-800" aria-label="Abrir menu"><i data-lucide="menu"></i></button>
+    </header>
+    <div id="sidebar-overlay" class="fixed inset-0 z-40 hidden bg-slate-950/60 backdrop-blur-sm md:hidden"></div>
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 flex w-72 -translate-x-full flex-col justify-between bg-slate-950 p-4 text-slate-300 transition-transform md:relative md:translate-x-0">
+      <div>
+        <div class="mb-7 hidden items-center gap-3 px-2 md:flex">
+          <img src="assets/Logo_provida.png" alt="Logo" class="h-11 w-11 object-contain">
+          <div><div class="text-sm font-bold text-white">MULTICENTRO</div><div class="text-xs font-semibold text-cyan-400">ADRIANO PONDÉ</div></div>
+        </div>
+        <div class="mb-6 flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-3">
+          <div id="user-avatar" class="flex h-11 w-11 items-center justify-center rounded-full bg-cyan-600 font-bold text-white">U</div>
+          <div class="min-w-0">
+            <div id="user-name" class="truncate text-sm font-semibold text-white">Usuário</div>
+            <div id="user-role" class="truncate text-xs text-cyan-300">Perfil</div>
+          </div>
+        </div>
+        <nav id="nav" class="space-y-2"></nav>
+      </div>
+      <button id="logout-btn" class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-rose-300 hover:bg-slate-900"><i data-lucide="log-out" class="h-4 w-4"></i>Sair</button>
+    </aside>
+
+    <main class="min-w-0 flex-1 overflow-y-auto pt-20 md:pt-0">
+      <div class="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+        <!-- Dashboard -->
+        <section id="view-dashboard" class="view hidden space-y-6">
+          <div class="flex flex-col gap-4 border-b border-slate-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-600">Gestão e indicadores</p>
+              <h2 class="mt-1 text-2xl font-bold text-slate-900">Central de Gestão</h2>
+              <p class="mt-1 text-sm text-slate-500">Explore a coleta, compare períodos, filtre por jovem e exporte os dados usados pela gestão.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button class="filter-chip" data-range="today">Hoje</button>
+              <button class="filter-chip" data-range="7d">7 dias</button>
+              <button class="filter-chip" data-range="month">Este mês</button>
+              <button class="filter-chip" data-range="prev-month">Mês anterior</button>
+              <a id="metabase-btn" href="#" target="_blank" rel="noopener noreferrer" class="hidden btn-light"><i data-lucide="external-link" class="h-4 w-4"></i>Metabase</a>
+            </div>
+          </div>
+
+          <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div class="flex-1">
+                <label class="label" for="dash-young">Filtrar por jovem</label>
+                <div class="flex flex-col gap-2 sm:flex-row">
+                  <select id="dash-young" class="field"><option value="">Todos os jovens</option></select>
+                  <button id="dash-clear-young" type="button" class="btn-light sm:min-w-32"><i data-lucide="rotate-ccw" class="h-4 w-4"></i>Limpar</button>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3 sm:flex sm:items-end">
+                <div><label class="label" for="dash-from">De</label><input id="dash-from" type="date" class="field-sm"></div>
+                <div><label class="label" for="dash-to">Até</label><input id="dash-to" type="date" class="field-sm"></div>
+                <button id="dash-filter" type="button" class="btn-dark col-span-2 sm:col-span-1"><i data-lucide="refresh-cw" class="h-4 w-4"></i>Atualizar</button>
+              </div>
+            </div>
+            <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+              <span class="rounded-full bg-slate-100 px-3 py-1.5 font-semibold text-slate-600">Filtro atual: <strong id="dash-date-label">—</strong></span>
+              <span class="rounded-full bg-cyan-50 px-3 py-1.5 font-semibold text-cyan-700">Clique em “Filtrar” na tabela para aprofundar em um jovem.</span>
+            </div>
+          </article>
+
+          <div class="grid grid-cols-2 gap-3 lg:grid-cols-6">
+            <div class="kpi-card"><span>Total de pesquisas</span><strong id="kpi-total">0</strong><small id="delta-total">—</small></div>
+            <div class="kpi-card"><span>Satisfação</span><strong id="kpi-satisfacao">0%</strong><small id="delta-satisfacao">—</small></div>
+            <div class="kpi-card"><span>Indicaria</span><strong id="kpi-indicaria">0%</strong><small id="delta-indicaria">—</small></div>
+            <div class="kpi-card"><span>Feedbacks</span><strong id="kpi-feedback">0</strong><small id="delta-feedback">—</small></div>
+            <div class="kpi-card"><span>Média / dia</span><strong id="kpi-media-dia">0</strong><small id="delta-media">—</small></div>
+            <div class="kpi-card"><span>Jovens com coleta</span><strong id="kpi-jovens">0</strong><small class="text-xs font-bold text-slate-400">no período</small></div>
+          </div>
+
+          <div class="grid gap-6 xl:grid-cols-[1.25fr_.75fr]">
+            <article class="chart-card">
+              <div class="flex items-start justify-between gap-4"><div><div class="chart-title">Ritmo de coleta</div><p class="text-xs text-slate-500">Linha da coleta diária comparada com a referência de 60 pesquisas.</p></div><span id="collection-rate" class="pill-cyan">0%</span></div>
+              <div class="chart-box mt-3"><canvas id="chart-daily"></canvas></div>
+            </article>
+            <article class="chart-card">
+              <div class="chart-title">Saúde da meta</div>
+              <div class="mt-5 flex items-center gap-4"><div class="relative h-28 w-28 shrink-0 rounded-full bg-slate-100"><div id="collection-rate-ring" class="absolute inset-2 rounded-full bg-white"></div><div class="absolute inset-0 flex items-center justify-center"><span id="collection-rate-big" class="text-2xl font-black text-slate-900">0%</span></div></div><div><div id="collection-average" class="text-lg font-bold text-slate-900">0 / dia</div><p id="collection-detail" class="mt-1 text-xs leading-5 text-slate-500">Referência de 60 pesquisas por dia no período selecionado.</p></div></div>
+              <div class="mt-5 h-2.5 overflow-hidden rounded-full bg-slate-100"><div id="collection-rate-bar" class="h-full rounded-full bg-cyan-500 transition-all" style="width:0%"></div></div>
+            </article>
+          </div>
+
+          <div class="grid gap-6 lg:grid-cols-2">
+            <article class="chart-card"><div class="chart-title">Distribuição das avaliações</div><div class="chart-box"><canvas id="chart-satisfaction"></canvas></div></article>
+            <article class="chart-card"><div class="chart-title">Intenção de indicação</div><div class="chart-box"><canvas id="chart-recommendation"></canvas></div></article>
+            <article class="chart-card lg:col-span-2"><div class="chart-title">Desempenho por pergunta</div><p class="mb-2 text-xs text-slate-500">Percentual de respostas positivas (Satisfeito + Muito Satisfeito).</p><div class="chart-box"><canvas id="chart-questions"></canvas></div></article>
+            <article class="chart-card lg:col-span-2"><div class="chart-title">Média de pesquisas por dia — jovens</div><p class="mb-2 text-xs text-slate-500">Use o filtro individual para detalhar um jovem específico.</p><div class="chart-box"><canvas id="chart-youngs"></canvas></div></article>
+          </div>
+
+          <div class="grid gap-6 xl:grid-cols-[1.2fr_.8fr]">
+            <article class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <div class="flex items-center justify-between border-b border-slate-100 p-4"><div><h3 class="font-semibold text-slate-900">Desempenho por jovem</h3><p class="text-xs text-slate-500">Volume, satisfação e feedbacks no período filtrado.</p></div></div>
+              <div class="overflow-x-auto"><table class="min-w-full text-left text-sm"><thead class="bg-slate-50 text-xs uppercase text-slate-400"><tr><th class="px-4 py-3">Nome</th><th class="px-4 py-3">Pesquisas</th><th class="px-4 py-3">Média/dia</th><th class="px-4 py-3">Satisfação</th><th class="px-4 py-3">Indicaria</th><th class="px-4 py-3">Feedbacks</th><th class="px-4 py-3"></th></tr></thead><tbody id="table-users" class="divide-y divide-slate-100"></tbody></table></div>
+            </article>
+            <div class="space-y-6">
+              <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div class="flex items-center gap-2"><div class="section-icon"><i data-lucide="sparkles" class="h-4 w-4"></i></div><div><h3 class="font-semibold text-slate-900">Leituras rápidas</h3><p class="text-xs text-slate-500">Indicadores descritivos para apoiar o acompanhamento.</p></div></div><div id="insight-list" class="mt-4 space-y-3"></div></article>
+              <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div class="flex items-center gap-2"><div class="section-icon"><i data-lucide="message-square-text" class="h-4 w-4"></i></div><div><h3 class="font-semibold text-slate-900">Feedbacks recentes</h3><p class="text-xs text-slate-500">Acompanhe observações registradas sem sair do dashboard.</p></div></div><div id="feedback-list" class="mt-4 space-y-3"></div></article>
+            </div>
+          </div>
+        </section>
+
+        <!-- Jovem -->
+        <section id="view-pesquisa" class="view hidden space-y-6">
+          <div class="flex flex-col gap-3 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-600">Coleta</p><h2 class="mt-1 text-2xl font-bold text-slate-900">Pesquisa de Satisfação de Usuários (AS) - Provida</h2><p class="mt-1 text-sm text-slate-500">Registre uma pesquisa por vez. Cada resposta ganha uma cópia local de segurança e depois é sincronizada com o banco.</p></div>
+            <div class="w-full sm:w-72"><div class="mb-1.5 flex items-center justify-between text-xs font-semibold"><span>Progresso</span><span id="progress-text">0/60</span></div><div class="h-3 overflow-hidden rounded-full bg-slate-200"><div id="progress-bar" class="h-full rounded-full bg-cyan-500 transition-all" style="width:0%"></div></div></div>
+          </div>
+
+          <div id="goal-success" class="hidden rounded-3xl border border-emerald-200 bg-emerald-50 p-8 text-center">
+            <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-white"><i data-lucide="check" class="h-8 w-8"></i></div>
+            <h3 class="text-2xl font-bold text-emerald-800">Meta Concluída com Sucesso!</h3>
+            <p id="goal-success-text" class="mt-2 text-sm text-emerald-700">As 60 pesquisas foram enviadas para o sistema.</p>
+            <div class="mt-5 flex flex-col justify-center gap-3 sm:flex-row">
+              <button id="retry-sync" type="button" class="hidden btn-dark"><i data-lucide="refresh-cw" class="mr-2 inline-block h-4 w-4"></i>Tentar sincronizar novamente</button>
+              <button id="go-backup" type="button" class="btn-light"><i data-lucide="shield-check" class="mr-2 inline-block h-4 w-4"></i>Ver minha cópia de segurança</button>
+            </div>
+          </div>
+
+          <form id="survey-form" class="space-y-6">
+            <div class="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2">
+              <div><label for="survey-date" class="label">Data</label><input id="survey-date" type="date" class="field" required></div>
+              <div><label for="survey-name" class="label">Nome (opcional)</label><input id="survey-name" type="text" maxlength="150" class="field" placeholder="Opcional"></div>
+            </div>
+
+            <div id="questions-container" class="space-y-5"></div>
+
+            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <label for="survey-feedback" class="label">Elogio / Reclamação / Sugestão</label>
+              <textarea id="survey-feedback" rows="4" maxlength="2000" class="field resize-y" placeholder="Registre aqui uma observação, se houver."></textarea>
+              <label for="survey-contact" class="mt-4 block text-sm font-semibold text-slate-700">Caso deseje identificar-se, utilize os campos abaixo</label>
+              <input id="survey-contact" type="text" maxlength="250" class="field mt-1.5" placeholder="Telefone, e-mail ou outro contato">
+            </div>
+
+            <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button id="save-survey" type="submit" class="btn-primary sm:min-w-52">Salvar Pesquisa</button>
+              <button id="send-surveys" type="button" class="btn-light sm:min-w-52">Enviar Pesquisas</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- Minhas pesquisas / backup do jovem -->
+        <section id="view-backup" class="view hidden space-y-6">
+          <div class="flex flex-col gap-3 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-600">Proteção dos dados</p>
+              <h2 class="mt-1 text-2xl font-bold text-slate-900">Minhas Pesquisas</h2>
+              <p class="mt-1 text-sm text-slate-500">Cada pesquisa fica com uma cópia local automática neste navegador para você conseguir exportar mesmo quando o banco estiver temporariamente indisponível.</p>
+            </div>
+            <span id="backup-connectivity" class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>Banco conectado</span>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <article class="kpi-card"><span>Cópias locais</span><strong id="backup-local-count">0</strong><small>salvas neste navegador</small></article>
+            <article class="kpi-card"><span>Aguardando sincronização</span><strong id="backup-pending-count">0</strong><small>mantidas para reenvio</small></article>
+            <article class="kpi-card"><span>Pesquisas no banco</span><strong id="backup-server-count">0</strong><small id="backup-server-label">no período selecionado</small></article>
+          </div>
+
+          <article class="rounded-2xl border border-cyan-100 bg-cyan-50 p-5 shadow-sm">
+            <div class="flex items-start gap-3">
+              <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-cyan-700 shadow-sm"><i data-lucide="shield-check" class="h-5 w-5"></i></div>
+              <div>
+                <h3 class="font-semibold text-slate-900">Cópia de segurança automática</h3>
+                <p class="mt-1 text-sm leading-6 text-slate-700">Ao salvar uma pesquisa, o sistema grava uma segunda cópia no armazenamento local do seu navegador. Assim, se o banco ficar fora do ar, você ainda pode baixar suas pesquisas e reenviá-las depois.</p>
+                <p class="mt-2 text-xs leading-5 text-slate-500"><strong>Importante:</strong> esta cópia fica neste computador/navegador. Evite limpar os dados do navegador antes de baixar o CSV diário.</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div class="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+              <div><label for="backup-from" class="label">Data inicial</label><input id="backup-from" type="date" class="field"></div>
+              <div><label for="backup-to" class="label">Data final</label><input id="backup-to" type="date" class="field"></div>
+              <button id="backup-refresh" type="button" class="btn-dark"><i data-lucide="refresh-cw" class="h-4 w-4"></i>Atualizar</button>
+            </div>
+            <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <button id="backup-download-today" type="button" class="btn-primary"><i data-lucide="download" class="mr-2 inline-block h-4 w-4"></i>Baixar cópia de hoje</button>
+              <button id="backup-download-period" type="button" class="btn-light"><i data-lucide="calendar-range" class="mr-2 inline-block h-4 w-4"></i>Baixar período</button>
+              <button id="backup-download-pending" type="button" class="btn-light"><i data-lucide="cloud-off" class="mr-2 inline-block h-4 w-4"></i>Baixar pendentes</button>
+            </div>
+            <p class="mt-3 text-xs text-slate-400">Primeiro tentamos baixar os dados do PostgreSQL. Se o banco estiver indisponível, o sistema automaticamente usa a sua cópia local.</p>
+          </article>
+
+          <article class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div class="flex flex-col gap-2 border-b border-slate-100 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div><h3 class="font-semibold text-slate-900">Pesquisas da cópia local</h3><p id="backup-table-subtitle" class="text-xs text-slate-500">—</p></div>
+              <span id="backup-last-copy" class="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">Nenhuma cópia baixada nesta sessão</span>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="min-w-[900px] w-full text-left text-sm">
+                <thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr><th class="px-4 py-3">Data</th><th class="px-4 py-3">Nome</th><th class="px-4 py-3">P1</th><th class="px-4 py-3">P2</th><th class="px-4 py-3">P3</th><th class="px-4 py-3">P4</th><th class="px-4 py-3">P5</th><th class="px-4 py-3">Status</th></tr></thead>
+                <tbody id="backup-table-body" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <!-- Download CSV -->
+        <section id="view-download" class="view hidden space-y-6">
+          <div class="border-b border-slate-200 pb-5">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-600">Exportação</p>
+            <h2 class="mt-1 text-2xl font-bold text-slate-900">Baixar Pesquisas</h2>
+            <p class="mt-1 text-sm text-slate-500">Exporte as pesquisas registradas em CSV para abrir no Excel ou no Google Planilhas.</p>
+          </div>
+          <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
+            <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div class="flex items-start gap-4">
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700"><i data-lucide="download" class="h-6 w-6"></i></div>
+                <div>
+                  <h3 class="font-semibold text-slate-900">Exportar dados das pesquisas</h3>
+                  <p class="mt-1 text-sm text-slate-500">Escolha o período e baixe um arquivo <strong>CSV em UTF-8</strong>, já preparado para o Excel.</p>
+                </div>
+              </div>
+              <div class="mt-6 grid gap-4 sm:grid-cols-3">
+                <div><label for="export-from" class="label">Data inicial</label><input id="export-from" type="date" class="field"></div>
+                <div><label for="export-to" class="label">Data final</label><input id="export-to" type="date" class="field"></div>
+                <div><label for="export-young" class="label">Jovem</label><select id="export-young" class="field"><option value="">Todos os jovens</option></select></div>
+              </div>
+              <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+                <button id="export-csv-btn" type="button" class="btn-primary sm:min-w-56"><i data-lucide="download" class="mr-2 inline-block h-4 w-4"></i>Baixar pesquisas em CSV</button>
+                <button id="export-this-month" type="button" class="btn-light">Usar mês atual</button>
+              </div>
+              <p class="mt-4 text-xs text-slate-400">O arquivo respeita o período e o jovem selecionados e inclui respostas, observações, contato e identificação do responsável pela coleta.</p>
+            </article>
+            <aside class="rounded-2xl border border-cyan-100 bg-cyan-50 p-6">
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">Para Excel</p>
+              <h3 class="mt-2 font-semibold text-slate-900">Arquivo pronto para planilha</h3>
+              <p class="mt-2 text-sm leading-6 text-slate-600">O CSV usa separador <strong>;</strong> e inclui BOM UTF-8 para preservar acentos como “Satisfação”, “Não” e nomes dos usuários.</p>
+            </aside>
+          </div>
+        </section>
+
+        <!-- Admin -->
+        <section id="view-admin" class="view hidden space-y-6">
+          <div class="border-b border-slate-200 pb-5"><p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-600">Manutenção</p><h2 class="mt-1 text-2xl font-bold text-slate-900">Gerenciar usuários</h2><p class="mt-1 text-sm text-slate-500">Adicione ou remova contas de Gestão e Jovem Aprendiz. O administrador principal não é removível.</p></div>
+          <div class="grid gap-6 lg:grid-cols-[360px_1fr]">
+            <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 class="font-semibold text-slate-900">Novo usuário</h3><p class="mt-1 text-xs text-slate-500">Somente Gestão e Jovem Aprendiz.</p>
+              <form id="user-form" class="mt-5 space-y-4">
+                <div><label for="user-name-input" class="label">Nome</label><input id="user-name-input" class="field" required></div>
+                <div><label for="user-email-input" class="label">E-mail</label><input id="user-email-input" type="email" class="field" required></div>
+                <div><label for="user-password-input" class="label">Senha</label><input id="user-password-input" type="password" minlength="6" class="field" required></div>
+                <div><label for="user-role-input" class="label">Perfil</label><select id="user-role-input" class="field"><option value="JOVEM">Jovem Aprendiz</option><option value="GESTAO">Gestão</option></select></div>
+                <button class="btn-dark w-full" type="submit">Criar usuário</button>
+              </form>
+            </article>
+            <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div class="border-b border-slate-100 p-4"><h3 class="font-semibold text-slate-900">Acessos cadastrados</h3></div><div class="overflow-x-auto"><table class="min-w-full text-left text-sm"><thead class="bg-slate-50 text-xs uppercase text-slate-400"><tr><th class="px-4 py-3">Nome</th><th class="px-4 py-3">E-mail</th><th class="px-4 py-3">Perfil</th><th class="px-4 py-3">Status</th><th class="px-4 py-3"></th></tr></thead><tbody id="table-admin-users" class="divide-y divide-slate-100"></tbody></table></div></article>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal envio -->
+  <div id="send-modal" class="fixed inset-0 z-[90] hidden items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+      <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-amber-600"><i data-lucide="send" class="h-6 w-6"></i></div>
+      <h3 class="text-center text-lg font-bold text-slate-900">DESEJA REALMENTE ENVIAR AS SUAS PESQUISAS?</h3>
+      <p id="send-modal-text" class="mt-2 text-center text-sm text-slate-500">As pesquisas pendentes serão enviadas ao servidor.</p>
+      <div class="mt-6 grid grid-cols-2 gap-3"><button id="modal-cancel" class="btn-light">Cancelar</button><button id="modal-confirm" class="btn-primary">Confirmar</button></div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
