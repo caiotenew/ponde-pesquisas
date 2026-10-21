@@ -13,6 +13,10 @@ let serverCountCache = 0;
 let sending = false;
 let youngOptions = [];
 let lastDashboardData = null;
+let setupMode = false;
+let setupConfigured = false;
+let mandatoryPasswordChange = false;
+let presenceInterval = null;
 
 const QUESTIONS = [
   { id:'p1', title:'1. Gentileza e disponibilidade na recepção?', options:[['MUITO_SATISFEITO','Muito Satisfeito'],['SATISFEITO','Satisfeito'],['INSATISFEITO','Insatisfeito'],['MUITO_INSATISFEITO','Muito Insatisfeito']] },
@@ -43,7 +47,12 @@ async function api(path, options={}) {
   if (options.body && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) headers.Authorization = `Bearer ${token}`;
-  const response = await fetch(`${API}${path}`, { ...options, headers });
+  let response;
+  try {
+    response = await fetch(`${API}${path}`, { ...options, headers });
+  } catch {
+    throw new Error('Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente em instantes.');
+  }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || 'Erro na comunicação com o servidor.');
   return data;
@@ -562,6 +571,7 @@ async function loadDashboard() {
     renderUsersTable(users.users);
     renderQuickInsights(data, users.users);
     renderRecentFeedbacks(data);
+    await loadOnlineYoungs();
   } catch (error) { toast(error.message, 'error'); }
 }
 
@@ -692,31 +702,177 @@ async function exportSurveysCsv() {
 async function loadUsers() {
   try {
     const data = await api('/api/users');
-    $('table-admin-users').innerHTML = data.users.map((u) => `<tr><td class="px-4 py-3 font-semibold">${escapeHtml(u.nome)}</td><td class="px-4 py-3">${escapeHtml(u.email)}</td><td class="px-4 py-3">${u.role === 'GESTAO' ? 'Gestão' : u.role === 'JOVEM' ? 'Jovem Aprendiz' : 'Administrador'}</td><td class="px-4 py-3"><span class="rounded-full px-2.5 py-1 text-xs font-semibold ${u.ativo?'bg-emerald-50 text-emerald-700':'bg-slate-100 text-slate-500'}">${u.ativo?'Ativo':'Inativo'}</span></td><td class="px-4 py-3 text-right">${u.role === 'ADMIN' ? '<span class="text-xs text-slate-400">Protegido</span>' : `<button class="text-xs font-semibold text-rose-600 hover:underline" data-remove-user="${u.id}">Remover</button>`}</td></tr>`).join('');
+    $('table-admin-users').innerHTML = data.users.map((u) => {
+      const roleLabel = u.role === 'GESTAO' ? 'Gestão' : u.role === 'JOVEM' ? 'Jovem Aprendiz' : 'Administrador';
+      const present = u.ativo && u.role === 'JOVEM' && u.lastSeenAt && (Date.now() - new Date(u.lastSeenAt).getTime() < 90000);
+      const seenLabel = present ? 'Online agora' : u.lastSeenAt ? `Visto ${new Date(u.lastSeenAt).toLocaleString('pt-BR', { dateStyle:'short', timeStyle:'short' })}` : 'Sem presença';
+      const statusLabel = u.ativo ? 'Ativo' : 'Inativo';
+      const statusClass = u.ativo ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500';
+      const protectedUser = u.role === 'ADMIN';
+      const actions = protectedUser ? '<span class="text-xs font-semibold text-slate-400">Conta protegida</span>' : `
+        <div class="flex min-w-52 flex-wrap justify-end gap-2">
+          <button class="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50" data-toggle-user="${u.id}" data-active="${u.ativo}">${u.ativo ? 'Desativar' : 'Ativar'}</button>
+          <button class="rounded-lg border border-cyan-100 px-2 py-1 text-xs font-semibold text-cyan-800 hover:bg-cyan-50" data-role-user="${u.id}" data-role="${u.role}">Mudar perfil</button>
+          <button class="rounded-lg border border-amber-100 px-2 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-50" data-reset-password="${u.id}" data-name="${escapeHtml(u.nome)}">Redefinir senha</button>
+          <button class="rounded-lg border border-rose-100 px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-50" data-remove-user="${u.id}">Remover</button>
+        </div>`;
+      return `<tr>
+        <td class="px-4 py-3 font-semibold">${escapeHtml(u.nome)}</td>
+        <td class="px-4 py-3">${escapeHtml(u.email)}</td>
+        <td class="px-4 py-3">${roleLabel}</td>
+        <td class="px-4 py-3"><span class="rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}">${statusLabel}</span></td>
+        <td class="px-4 py-3 text-xs ${present ? 'font-bold text-emerald-700' : 'text-slate-400'}">${escapeHtml(seenLabel)}</td>
+        <td class="px-4 py-3 text-right">${actions}</td>
+      </tr>`;
+    }).join('');
     document.querySelectorAll('[data-remove-user]').forEach((btn) => btn.addEventListener('click', () => removeUser(Number(btn.dataset.removeUser))));
+    document.querySelectorAll('[data-toggle-user]').forEach((btn) => btn.addEventListener('click', () => toggleUser(Number(btn.dataset.toggleUser), btn.dataset.active === 'true')));
+    document.querySelectorAll('[data-role-user]').forEach((btn) => btn.addEventListener('click', () => changeUserRole(Number(btn.dataset.roleUser), btn.dataset.role)));
+    document.querySelectorAll('[data-reset-password]').forEach((btn) => btn.addEventListener('click', () => resetUserPassword(Number(btn.dataset.resetPassword), btn.dataset.name)));
   } catch (error) { toast(error.message, 'error'); }
 }
 
 async function removeUser(id) {
-  if (!confirm('Deseja realmente remover este usuário?')) return;
-  try { const result = await api(`/api/users/${id}`, { method:'DELETE' }); toast(result.message, 'success'); await loadUsers(); } catch (error) { toast(error.message, 'error'); }
+  if (!confirm('Deseja remover este usuário? Se ele tiver pesquisas registradas, a conta será desativada para preservar o histórico.')) return;
+  try { const result = await api(`/api/users/${id}`, { method:'DELETE' }); toast(result.message, 'success'); await loadUsers(); await loadOnlineYoungs(); }
+  catch (error) { toast(error.message, 'error'); }
+}
+
+async function toggleUser(id, isActive) {
+  const action = isActive ? 'desativar' : 'reativar';
+  if (!confirm(`Deseja ${action} este acesso?`)) return;
+  try {
+    const result = await api(`/api/users/${id}`, { method:'PATCH', body:JSON.stringify({ ativo:!isActive }) });
+    toast(result.message || 'Status atualizado.', 'success');
+    await loadUsers(); await loadOnlineYoungs();
+  } catch (error) { toast(error.message, 'error'); }
+}
+
+async function changeUserRole(id, role) {
+  const nextRole = role === 'JOVEM' ? 'GESTAO' : 'JOVEM';
+  const label = nextRole === 'GESTAO' ? 'Gestão' : 'Jovem Aprendiz';
+  if (!confirm(`Alterar o perfil deste usuário para ${label}? Isso muda as funções disponíveis no próximo acesso.`)) return;
+  try {
+    const result = await api(`/api/users/${id}`, { method:'PATCH', body:JSON.stringify({ role:nextRole }) });
+    toast(result.message || 'Perfil atualizado.', 'success'); await loadUsers();
+  } catch (error) { toast(error.message, 'error'); }
+}
+
+async function resetUserPassword(id, name) {
+  const password = prompt(`Digite uma nova senha temporária para ${name || 'este usuário'} (mínimo 8 caracteres):`);
+  if (password === null) return;
+  if (password.length < 8 || password.length > 72) { toast('A senha temporária precisa ter de 8 a 72 caracteres.', 'error'); return; }
+  try {
+    const result = await api(`/api/users/${id}/password`, { method:'PUT', body:JSON.stringify({ novaSenha:password }) });
+    toast(result.message || 'Senha redefinida.', 'success');
+  } catch (error) { toast(error.message, 'error'); }
 }
 
 async function handleCreateUser(event) {
   event.preventDefault();
   const body = { nome:$('user-name-input').value.trim(), email:$('user-email-input').value.trim(), senha:$('user-password-input').value, role:$('user-role-input').value };
-  try { await api('/api/users', { method:'POST', body:JSON.stringify(body) }); toast('Usuário criado com sucesso!', 'success'); event.target.reset(); await loadUsers(); } catch (error) { toast(error.message, 'error'); }
+  try { await api('/api/users', { method:'POST', body:JSON.stringify(body) }); toast('Usuário criado com sucesso!', 'success'); event.target.reset(); await loadUsers(); }
+  catch (error) { toast(error.message, 'error'); }
+}
+
+async function refreshSetupStatus() {
+  try {
+    const status = await api('/api/auth/setup-status');
+    setupMode = Boolean(status.needsSetup);
+    setupConfigured = Boolean(status.setupConfigured);
+  } catch (error) {
+    setupMode = false;
+    setupConfigured = false;
+    console.warn('Não foi possível consultar a configuração inicial:', error.message);
+  }
+  $('auth-mode-toggle').textContent = setupMode ? 'Configurar primeira conta (Administrador)' : 'Criar conta de Jovem Aprendiz';
+  const accessNote = $('auth-access-note');
+  if (accessNote) accessNote.innerHTML = setupMode
+    ? '<i data-lucide="info" aria-hidden="true"></i><p>Primeiro acesso: use o botão abaixo para configurar a conta principal de administrador. Depois, o administrador libera os acessos de Gestão.</p>'
+    : '<i data-lucide="info" aria-hidden="true"></i><p>Novo acesso de Jovem Aprendiz? Use o botão abaixo. <strong>Contas de Gestão são criadas exclusivamente pelo administrador.</strong></p>';
+  window.lucide?.createIcons?.();
+  setSignupFieldsMode();
+}
+
+function setSignupFieldsMode() {
+  const fieldIds = ['signup-email', 'signup-password', 'signup-password-confirm'];
+  fieldIds.forEach((id) => { $(id).disabled = setupMode; $(id).required = !setupMode; });
+  $('signup-standard-fields').classList.toggle('hidden', setupMode);
+  $('signup-admin-note').classList.toggle('hidden', !setupMode);
+  $('signup-admin-key').disabled = !setupMode || !setupConfigured;
+  $('signup-admin-key').required = setupMode && setupConfigured;
+  $('signup-admin-key-container').classList.toggle('hidden', !setupMode || !setupConfigured);
+  $('signup-admin-unconfigured').classList.toggle('hidden', !setupMode || setupConfigured);
+  $('signup-submit').textContent = setupMode ? (setupConfigured ? 'Criar administrador e entrar' : 'Configure a chave do administrador') : 'Criar conta de Jovem Aprendiz';
+  $('signup-submit').disabled = setupMode && !setupConfigured;
+  if (setupMode && !$('signup-name').value) $('signup-name').value = 'Caio Damasceno';
+  if (!setupMode && $('signup-name').value === 'Caio Damasceno') $('signup-name').value = '';
+}
+
+function showAuthMode(mode) {
+  const isSignup = mode === 'signup';
+  $('login-form').classList.toggle('hidden', isSignup);
+  $('signup-form').classList.toggle('hidden', !isSignup);
+  $('auth-mode-toggle').classList.toggle('hidden', isSignup);
+  $('login-title').textContent = isSignup ? (setupMode ? 'Configurar administrador' : 'Criar conta de Jovem Aprendiz') : 'Acesse o portal';
+  $('login-description').textContent = isSignup
+    ? (setupMode ? 'Configure a conta principal de administração do portal.' : 'Crie seu acesso de Jovem Aprendiz para registrar pesquisas.')
+    : 'Entre com seu e-mail e senha para acessar o portal.';
+  if (isSignup) setSignupFieldsMode();
+  $('auth-access-note')?.classList.toggle('hidden', isSignup);
+  window.lucide?.createIcons?.();
+}
+
+async function completeLogin(result, message, currentPassword = '') {
+  localStorage.setItem(TOKEN_KEY, result.token);
+  localStorage.setItem(USER_KEY, JSON.stringify(result.user));
+  currentUser = result.user;
+  setScreen(true); renderUserHeader(); renderNav();
+  toast(message || 'Acesso realizado com sucesso!', 'success');
+  if (currentUser.mustChangePassword) {
+    mandatoryPasswordChange = true;
+    openChangePasswordModal(true);
+    $('password-current').value = currentPassword;
+    return;
+  }
+  startPresenceTracking();
+  if (currentUser.role === 'ADMIN' || currentUser.role === 'GESTAO') navigate('dashboard'); else navigate('pesquisa');
+}
+
+async function handleSignup(event) {
+  event.preventDefault();
+  const nome = $('signup-name').value.trim();
+  if (nome.length < 2) { toast('Informe seu nome completo.', 'error'); return; }
+  const btn = $('signup-submit');
+  btn.disabled = true; btn.textContent = 'Criando conta...';
+  try {
+    let result;
+    if (setupMode) {
+      result = await api('/api/auth/bootstrap-admin', { method:'POST', body:JSON.stringify({ nome, setupKey:$('signup-admin-key').value.trim() }) });
+      await completeLogin(result, 'Administrador criado. Altere a senha inicial agora.', '1234');
+    } else {
+      const email = $('signup-email').value.trim();
+      const senha = $('signup-password').value;
+      const confirmacao = $('signup-password-confirm').value;
+      if (senha !== confirmacao) throw new Error('A confirmação da senha não confere.');
+      result = await api('/api/auth/register', { method:'POST', body:JSON.stringify({ nome, email, senha }) });
+      await completeLogin(result, 'Conta de Jovem Aprendiz criada com sucesso.');
+    }
+  } catch (error) {
+    toast(error.message, 'error');
+    await refreshSetupStatus();
+  } finally {
+    setSignupFieldsMode();
+  }
 }
 
 async function handleLogin(event) {
   event.preventDefault();
   const btn = $('login-btn'); btn.disabled = true; btn.textContent = 'Entrando...';
   try {
-    const result = await api('/api/auth/login', { method:'POST', body:JSON.stringify({ email:$('login-email').value, senha:$('login-senha').value }) });
-    localStorage.setItem(TOKEN_KEY, result.token); localStorage.setItem(USER_KEY, JSON.stringify(result.user)); currentUser = result.user;
-    setScreen(true); renderUserHeader(); renderNav();
-    if (currentUser.role === 'ADMIN' || currentUser.role === 'GESTAO') navigate('dashboard'); else navigate('pesquisa');
-    toast('Login realizado com sucesso!', 'success');
+    const currentPassword = $('login-senha').value;
+    const result = await api('/api/auth/login', { method:'POST', body:JSON.stringify({ email:$('login-email').value, senha:currentPassword }) });
+    await completeLogin(result, 'Login realizado com sucesso!', currentPassword);
   } catch (error) { toast(error.message, 'error'); }
   finally { btn.disabled = false; btn.textContent = 'Entrar no portal'; }
 }
@@ -727,11 +883,103 @@ async function restoreSession() {
   try {
     const result = await api('/api/auth/me');
     currentUser = result.user; setScreen(true); renderUserHeader(); renderNav();
+    if (currentUser.mustChangePassword) {
+      mandatoryPasswordChange = true;
+      openChangePasswordModal(true);
+      return;
+    }
+    startPresenceTracking();
     if (currentUser.role === 'ADMIN' || currentUser.role === 'GESTAO') navigate('dashboard'); else navigate('pesquisa');
-  } catch { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); }
+  } catch { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); currentUser = null; }
 }
 
-function logout() { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); currentUser = null; setScreen(false); $('login-senha').value=''; }
+function startPresenceTracking() {
+  if (presenceInterval) clearInterval(presenceInterval);
+  const refresh = async () => {
+    if (!currentUser || !localStorage.getItem(TOKEN_KEY)) return;
+    try { await api('/api/auth/heartbeat', { method:'POST', body:'{}' }); } catch (error) { console.warn('Não foi possível atualizar a presença:', error.message); }
+    const dashboardVisible = $('view-dashboard') && !$('view-dashboard').classList.contains('hidden');
+    if (dashboardVisible && currentUser.role !== 'JOVEM') await loadOnlineYoungs();
+  };
+  refresh();
+  presenceInterval = setInterval(refresh, 25000);
+}
+
+async function loadOnlineYoungs() {
+  const list = $('online-youngs-list');
+  const count = $('online-count');
+  if (!list || !count || !currentUser || currentUser.role === 'JOVEM') return;
+  try {
+    const data = await api('/api/users/online');
+    count.innerHTML = `<span class="h-2 w-2 rounded-full bg-emerald-500"></span>${data.count} ${data.count === 1 ? 'jovem online' : 'jovens online'}`;
+    if (!data.users.length) {
+      list.innerHTML = '<p class="text-sm text-slate-400">Nenhum jovem com sessão ativa neste momento.</p>';
+      return;
+    }
+    list.innerHTML = data.users.map((user) => {
+      const lastSeen = user.lastSeenAt ? new Date(user.lastSeenAt).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }) : 'agora';
+      const initial = escapeHtml((user.nome || 'J').trim().charAt(0).toUpperCase());
+      return `<div class="flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/50 p-3">
+        <span class="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white font-bold text-emerald-800 shadow-sm">${initial}<span class="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500"></span></span>
+        <span class="min-w-0 flex-1"><strong class="block truncate text-sm text-slate-800">${escapeHtml(user.nome)}</strong><small class="text-xs text-emerald-700">Último sinal às ${escapeHtml(lastSeen)}</small></span>
+        <span class="text-[10px] font-bold uppercase tracking-wide text-emerald-700">Online</span>
+      </div>`;
+    }).join('');
+  } catch (error) {
+    list.innerHTML = '<p class="text-sm text-slate-400">Não foi possível atualizar a presença agora.</p>';
+    console.warn('Falha ao carregar jovens online:', error.message);
+  }
+}
+
+function openChangePasswordModal(mandatory = false) {
+  mandatoryPasswordChange = mandatory || mandatoryPasswordChange;
+  $('change-password-modal').classList.remove('hidden');
+  $('change-password-modal').classList.add('flex');
+  $('change-password-cancel').classList.toggle('hidden', mandatoryPasswordChange);
+  window.lucide?.createIcons?.();
+}
+
+function closeChangePasswordModal() {
+  if (mandatoryPasswordChange) return;
+  $('change-password-modal').classList.add('hidden');
+  $('change-password-modal').classList.remove('flex');
+  $('change-password-cancel').classList.remove('hidden');
+  $('change-password-form').reset();
+}
+
+async function handleChangePassword(event) {
+  event.preventDefault();
+  const current = $('password-current').value;
+  const next = $('password-new').value;
+  const confirm = $('password-confirm').value;
+  if (next !== confirm) { toast('A confirmação da nova senha não confere.', 'error'); return; }
+  if (next.length < 8) { toast('A nova senha deve ter pelo menos 8 caracteres.', 'error'); return; }
+  try {
+    const result = await api('/api/auth/change-password', { method:'POST', body:JSON.stringify({ senhaAtual:current, novaSenha:next }) });
+    if (currentUser) {
+      currentUser.mustChangePassword = false;
+      localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+    }
+    const wasMandatory = mandatoryPasswordChange;
+    mandatoryPasswordChange = false;
+    toast(result.message || 'Senha alterada com sucesso.', 'success');
+    closeChangePasswordModal();
+    if (wasMandatory && currentUser) {
+      startPresenceTracking();
+      if (currentUser.role === 'ADMIN' || currentUser.role === 'GESTAO') navigate('dashboard'); else navigate('pesquisa');
+    }
+  } catch (error) { toast(error.message, 'error'); }
+}
+
+async function logout() {
+  try { if (currentUser && localStorage.getItem(TOKEN_KEY)) await api('/api/auth/logout', { method:'POST', body:'{}' }); } catch (error) { /* A limpeza local permanece disponível mesmo sem conexão. */ }
+  if (presenceInterval) clearInterval(presenceInterval);
+  presenceInterval = null;
+  mandatoryPasswordChange = false;
+  localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); currentUser = null;
+  setScreen(false); $('login-senha').value='';
+  await refreshSetupStatus(); showAuthMode('login');
+}
 
 function togglePassword(inputId, buttonId) {
   const input = $(inputId); const button = $(buttonId); if (!input || !button) return;
@@ -746,6 +994,12 @@ function init() {
   $('backup-from').value = today();
   $('backup-to').value = today();
   $('login-form').addEventListener('submit', handleLogin);
+  $('signup-form').addEventListener('submit', handleSignup);
+  $('auth-mode-toggle').addEventListener('click', async () => { await refreshSetupStatus(); showAuthMode('signup'); });
+  $('signup-back-btn').addEventListener('click', () => showAuthMode('login'));
+  $('change-password-open').addEventListener('click', openChangePasswordModal);
+  $('change-password-cancel').addEventListener('click', closeChangePasswordModal);
+  $('change-password-form').addEventListener('submit', handleChangePassword);
   togglePassword('login-senha', 'toggle-login-password');
   $('survey-form').addEventListener('submit', handleSurveySubmit);
   $('send-surveys').addEventListener('click', openSendModal);
@@ -771,6 +1025,7 @@ function init() {
   if (window.APP_CONFIG?.METABASE_DASHBOARD_URL) { $('metabase-btn').href = window.APP_CONFIG.METABASE_DASHBOARD_URL; $('metabase-btn').classList.remove('hidden'); }
   window.addEventListener('online', () => { serverAvailable = true; if (currentUser?.role === 'JOVEM') toast('Conexão restabelecida. Você pode tentar sincronizar as pesquisas pendentes.', 'success'); });
   window.addEventListener('offline', () => { serverAvailable = false; if (currentUser?.role === 'JOVEM') toast('Sem conexão. O backup local continua disponível.', 'info'); });
+  refreshSetupStatus();
   restoreSession();
   window.lucide?.createIcons?.();
 }

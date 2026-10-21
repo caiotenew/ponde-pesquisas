@@ -43,3 +43,18 @@ Foi adicionada a área **Minhas Pesquisas** para o perfil Jovem Aprendiz.
 - O botão “Tentar sincronizar novamente” aparece quando a meta foi atingida mas o lote ainda não chegou ao banco.
 
 A cópia local é uma contingência operacional e não substitui uma política de backup do PostgreSQL. Limpar os dados do navegador pode remover a cópia local; por isso o fluxo recomenda baixar o CSV diariamente.
+
+## Atualização — cadastro, gestão de usuários e presença online
+
+- Adicionada opção de criar conta na tela inicial.
+- A primeira conta é criada exclusivamente para `damascenocaio311@gmail.com` como ADMIN, protegida por chave privada `ADMIN_SETUP_KEY`.
+- A senha inicial do administrador é `1234`; a troca é obrigatória antes de liberar o restante do portal.
+- Cadastros públicos posteriores criam somente perfil `JOVEM`; contas de `GESTAO` são criadas pelo administrador.
+- Adicionada troca de senha pelo próprio usuário e redefinição pelo ADMIN. Senhas redefinidas também exigem troca no próximo acesso.
+- Adicionada presença online de Jovens Aprendizes no dashboard, com atualização periódica.
+- A tela de usuários mostra status, última presença, ativação/desativação, mudança de perfil e redefinição de senha.
+- Gestão pode consultar a presença online, mas não pode administrar contas.
+- Adicionados os campos `lastSeenAt` e `mustChangePassword` ao modelo User.
+- O seed deixou de ser executado automaticamente no deploy e não sobrescreve usuários existentes.
+- Adicionado o comando explícito `npm run admin:reset` para preparar a conta principal em banco já populado, sem apagar pesquisas ou outros usuários.
+- Use `COMANDOS_TERMINAL.txt` para instruções de instalação, recuperação e publicação.

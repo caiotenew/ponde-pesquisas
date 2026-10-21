@@ -1,0 +1,88 @@
+
+PUBLICAÇÃO EM SUPABASE + RENDER + GITHUB PAGES
+Consulte DEPLOY_SUPABASE_RENDER.txt para as URLs de conexão, variáveis de ambiente e etapas de deploy.
+
+PONDE PESQUISAS — COMANDOS E PRIMEIRO ACESSO
+============================================
+
+1) INSTALAÇÃO LOCAL NOVA (WINDOWS)
+----------------------------------
+- Preencha as credenciais de PostgreSQL/Supabase no arquivo backend\.env.
+- Se ainda não existir backend\.env, execute INICIAR_SISTEMA.bat na pasta principal.
+  O assistente cria o arquivo, gera uma chave privada e abre o .env para edição.
+  Salve/feche o Bloco de Notas e pressione uma tecla para continuar.
+- O assistente executa npm install, Prisma Generate e Prisma DB Push e inicia a API.
+- No VS Code, abra frontend/index.html com a extensão Live Server (porta 5500).
+- Na tela do site, clique em “Configurar primeira conta (Administrador)” e informe a
+  chave ADMIN_SETUP_KEY exibida no terminal.
+- A conta inicial será damascenocaio311@gmail.com, senha temporária 1234.
+  A troca por uma senha com pelo menos 8 caracteres será obrigatória antes de usar o site.
+
+2) BANCO JÁ EXISTENTE (SE A TELA INICIAL DE ADMINISTRADOR NÃO APARECER)
+------------------------------------------------------------------------
+Use apenas se esse banco já tiver usuários cadastrados e você precisar preparar a conta
+administradora indicada. O comando não apaga pesquisas nem os outros usuários.
+
+PowerShell, dentro da pasta do projeto:
+
+  cd backend
+  npm install
+  npx prisma generate
+  npx prisma db push
+  npm run admin:reset
+  npm start
+
+Depois abra o frontend no Live Server e entre com:
+  E-mail: damascenocaio311@gmail.com
+  Senha temporária: 1234
+
+A troca da senha é obrigatória no primeiro acesso após o reset.
+
+3) PUBLICAÇÃO NO RENDER + GITHUB PAGES
+--------------------------------------
+No Render, configure estas variáveis para o backend:
+  DATABASE_URL
+  DIRECT_URL
+  JWT_SECRET
+  ADMIN_SETUP_KEY
+  ALLOWED_ORIGINS
+
+Gere uma chave segura para ADMIN_SETUP_KEY (execute no terminal com Node.js):
+  node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+Use uma chave privada de pelo menos 32 caracteres; guarde o valor para informar na tela
+inicial de configuração. Não publique a chave no GitHub.
+
+Build Command do Render:
+  npm install && npx prisma generate && npx prisma db push
+
+Start Command do Render:
+  npm start
+
+Edite frontend/js/config.js para substituir https://SEU-BACKEND.onrender.com pela URL real
+da API. Inclua o domínio do GitHub Pages em ALLOWED_ORIGINS.
+
+OBSERVAÇÕES DE SEGURANÇA
+------------------------
+- O cadastro público cria somente contas de Jovem Aprendiz.
+- Contas de Gestão são criadas pelo ADMIN dentro de Gerenciar Usuários.
+- Gestão e ADMIN podem ver os jovens online na Central de Gestão.
+- O ADMIN pode ativar/desativar usuários, mudar perfis, redefinir senhas e remover acessos.
+- Senhas redefinidas pelo ADMIN também exigem troca no próximo acesso.
+- Não execute o seed automaticamente no deploy. O seed é opcional e não sobrescreve um banco
+  que já tenha usuários.
+- A atualização do esquema adiciona campos de presença e de troca obrigatória de senha;
+  ela não apaga pesquisas ou usuários existentes.
+
+
+4) FLUXO PARA CRIAR AS CONTAS DE GESTÃO
+---------------------------------------
+Gestores não se cadastram sozinhos. Depois de entrar como ADMIN:
+  1. Abra “Gerenciar Usuários” no menu lateral.
+  2. Preencha nome, e-mail e senha temporária (mínimo 8 caracteres).
+  3. Escolha “Gestão” no campo Perfil e clique em “Criar usuário”.
+  4. Passe as credenciais diretamente ao gestor, por canal privado.
+  5. No primeiro login, o gestor obrigatoriamente define a própria senha.
+
+Jovens podem usar “Criar conta de Jovem Aprendiz” na tela pública. Esse cadastro nunca
+cria uma conta de Gestão. O sistema não envia convites automaticamente por e-mail.

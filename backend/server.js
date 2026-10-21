@@ -39,6 +39,11 @@ app.use('/api/users', userRoutes);
 app.use(errorHandler);
 
 async function start() {
+  const jwtSecret = String(process.env.JWT_SECRET || '').trim();
+  if (jwtSecret.length < 32 || jwtSecret.toLowerCase().startsWith('troque-')) {
+    console.error('JWT_SECRET ausente ou inseguro. Defina uma chave aleatória de pelo menos 32 caracteres no backend/.env.');
+    process.exit(1);
+  }
   try {
     await prisma.$connect();
     app.listen(PORT, () => console.log(`API disponível em http://localhost:${PORT}`));

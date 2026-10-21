@@ -1,0 +1,195 @@
+PONDE PESQUISAS — GUIA DE PUBLICAÇÃO
+SUPABASE (BANCO) + RENDER (API) + GITHUB PAGES (SITE)
+====================================================
+
+VISÃO GERAL
+-----------
+
+FLUXO DE LOGIN E CRIAÇÃO DE CONTAS
+---------------------------------
+1. PRIMEIRO ACESSO: depois que a API e o banco estiverem funcionando, abra o site e
+   clique em “Configurar primeira conta (Administrador)”. Informe a ADMIN_SETUP_KEY
+   que você guardou. A conta principal é damascenocaio311@gmail.com, com senha
+   temporária 1234. O sistema exige a troca dessa senha antes de liberar o portal.
+
+2. JOVEM APRENDIZ: depois da configuração inicial, a opção pública “Criar conta de
+   Jovem Aprendiz” permite que o jovem se cadastre e use apenas as funções de pesquisa
+   e de consulta das próprias pesquisas. O cadastro público nunca cria um perfil Gestão.
+
+3. GESTÃO: os gestores não criam a própria conta pela tela pública. Entre como ADMIN,
+   abra “Gerenciar Usuários”, preencha nome, e-mail e uma senha temporária com pelo
+   menos 8 caracteres e escolha o perfil “Gestão”. Clique em “Criar usuário” e entregue
+   os dados ao gestor por um canal privado. No primeiro login, ele deverá criar uma nova
+   senha. O sistema não envia convites ou senhas por e-mail automaticamente.
+
+4. MANUTENÇÃO: em “Gerenciar Usuários”, o ADMIN pode ativar/desativar acessos, mudar
+   o perfil de Jovem para Gestão e vice-versa, redefinir senhas e remover acessos. A senha
+   temporária após redefinição também exige troca no próximo acesso. Não é possível
+   remover a conta ADMIN principal pelo painel.
+
+5. SENHA DO ADMIN: dentro do portal, use a opção de alteração de senha para trocar a
+   senha atual. Se perder totalmente o acesso, recupere a conta por procedimento manual
+   no backend, com acesso autorizado ao banco; não crie outra conta ADMIN pública.
+
+- Supabase: armazena usuários e pesquisas no PostgreSQL.
+- Render: executa o backend/API Node.js.
+- GitHub Pages: publica o frontend (tela do site).
+
+IMPORTANTE: não coloque senhas, DATABASE_URL, DIRECT_URL, JWT_SECRET ou
+ADMIN_SETUP_KEY no código público do GitHub. Os segredos do backend ficam no Render.
+
+1. CONFIGURAR O SUPABASE
+------------------------
+1. Acesse https://supabase.com/dashboard e crie/abra seu projeto.
+2. Guarde a senha do banco de dados.
+3. Na opção Connect / Database, pegue duas strings de conexão:
+
+   DATABASE_URL = URI do Transaction Pooler (porta 6543).
+   DIRECT_URL   = URI do Session Pooler (porta 5432).
+
+4. Na DATABASE_URL, acrescente o parâmetro `pgbouncer=true`.
+   Se a URI já tiver `?` e outros parâmetros, acrescente com `&`.
+   Exemplo apenas ilustrativo:
+   postgresql://postgres.PROJECT_REF:SENHA@aws-0-REGIAO.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1
+
+5. Na DIRECT_URL, use a URI do Session Pooler pela porta 5432 e NÃO acrescente
+   `pgbouncer=true`. Exemplo ilustrativo:
+   postgresql://postgres.PROJECT_REF:SENHA@aws-0-REGIAO.pooler.supabase.com:5432/postgres
+
+Os endereços, nomes de usuário e região reais devem ser copiados do seu painel Supabase;
+os exemplos acima não são conexões válidas. Se a senha tiver caracteres especiais
+(@, :, /, #, ?, % etc.), codifique esses caracteres para uso em uma URI.
+
+2. ENVIAR O PROJETO AO GITHUB
+-----------------------------
+1. Extraia o ZIP do Ponde Pesquisas.
+2. Copie os arquivos da pasta `ponde_pesquisas` para dentro do repositório local que já
+   está conectado ao seu GitHub. Não apague a pasta `.git` existente desse repositório.
+3. Abra o terminal na pasta do repositório e confira a branch:
+
+   git status
+   git branch --show-current
+
+4. Revise as alterações e envie:
+
+   git add .
+   git commit -m "Atualiza Ponde Pesquisas para Supabase e Render"
+   git push
+
+Se `git commit` disser que não há alterações, confira se os arquivos do ZIP foram copiados
+para dentro do repositório certo. O workflow do frontend está configurado para as branches
+`main` e `master`.
+
+3. CRIAR O SERVIÇO NO RENDER
+----------------------------
+1. Acesse https://dashboard.render.com/ e escolha New + > Web Service.
+2. Conecte o repositório GitHub que contém o Ponde Pesquisas.
+3. Configure estes campos:
+
+   Name: ponde-pesquisas-api
+   Runtime/Language: Node
+   Root Directory: backend
+   Build Command: npm install && npx prisma generate && npx prisma db push
+   Start Command: npm start
+   Health Check Path: /api/health (se o campo estiver disponível)
+
+O `db push` sincroniza o esquema definido em `backend/prisma/schema.prisma` com o banco.
+Não execute `npm run admin:reset` no deploy normal: a primeira conta deve ser criada
+pela tela de configuração inicial quando o Supabase estiver vazio.
+
+4. CONFIGURAR AS VARIÁVEIS DE AMBIENTE DO RENDER
+-----------------------------------------------
+No serviço do Render, abra Environment e cadastre estas variáveis:
+
+DATABASE_URL      = URI do Transaction Pooler do Supabase (porta 6543), com pgbouncer=true
+DIRECT_URL        = URI do Session Pooler do Supabase (porta 5432)
+JWT_SECRET        = chave aleatória forte
+ADMIN_SETUP_KEY   = outra chave aleatória forte, diferente da JWT_SECRET
+ALLOWED_ORIGINS   = http://localhost:5500,http://127.0.0.1:5500,https://SEU_USUARIO.github.io
+
+Para gerar uma chave, rode este comando no terminal com Node.js:
+
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+Rode-o DUAS vezes: uma saída para JWT_SECRET e outra saída para ADMIN_SETUP_KEY.
+Guarde a ADMIN_SETUP_KEY para usar uma única vez na configuração do primeiro administrador.
+Não use os exemplos literalmente e nunca publique essas chaves no GitHub.
+
+ALLOWED_ORIGINS deve conter apenas as ORIGENS (protocolo + domínio), sem o caminho do
+repositório e sem barra no final. Exemplo: mesmo que o site seja
+https://SEU_USUARIO.github.io/ponde_pesquisas, a origem CORS é https://SEU_USUARIO.github.io.
+Se usar domínio próprio, inclua a origem desse domínio.
+
+Salve as variáveis e faça o deploy. Se o primeiro deploy for feito antes de cadastrar
+as variáveis, cadastre-as e faça novo deploy.
+
+5. TESTAR A API NO RENDER
+-------------------------
+Quando o serviço ficar Live, abra no navegador:
+
+   https://SUA-API.onrender.com/api/health
+
+O resultado esperado inclui:
+   {"status":"ok","database":"ok","service":"ponde-pesquisas-api"}
+
+Substitua SUA-API pelo subdomínio criado pelo Render. Se aparecer erro ou `database: offline`,
+confira as duas URLs do Supabase e o log de deploy do Render.
+
+6. CONECTAR O SITE AO BACKEND
+-----------------------------
+Depois que souber a URL verdadeira da API no Render:
+1. Abra `frontend/js/config.js`.
+2. Localize:
+   var PRODUCTION_API_URL = 'https://SEU-BACKEND.onrender.com';
+3. Troque pelo endereço real da API, sem barra final. Exemplo ilustrativo:
+   var PRODUCTION_API_URL = 'https://ponde-pesquisas-api.onrender.com';
+4. Salve e envie as alterações ao GitHub:
+
+   git add frontend/js/config.js
+   git commit -m "Configura URL da API no Render"
+   git push
+
+O GitHub Actions publica automaticamente o conteúdo de `frontend` no GitHub Pages.
+No GitHub, abra Settings > Pages e confira se a publicação por GitHub Actions está habilitada.
+O endereço final aparece nessa página. A URL precisa estar contemplada em ALLOWED_ORIGINS.
+
+7. PRIMEIRO ACESSO AO ADMINISTRADOR
+-----------------------------------
+Depois que a API responder `database: ok` e o frontend estiver publicado:
+1. Abra o site pelo endereço oficial do GitHub Pages.
+2. Selecione a configuração da primeira conta de administrador.
+3. Informe a ADMIN_SETUP_KEY definida nas variáveis do Render.
+4. O administrador inicial será:
+
+   E-mail: damascenocaio311@gmail.com
+   Senha temporária: 1234
+
+5. Troque a senha imediatamente quando o sistema solicitar. Não reutilize a senha temporária.
+
+A configuração inicial só funciona se ainda não houver usuário no banco. Se o projeto
+Supabase já tiver usuários, pare e avalie o banco antes de executar qualquer comando de
+recuperação administrativa. Não apague dados de produção por tentativa.
+
+8. TESTE FINAL
+---------------
+- /api/health retorna `status: ok` e `database: ok`.
+- A configuração inicial do ADMIN funciona apenas uma vez.
+- O ADMIN consegue trocar sua senha e gerenciar usuários.
+- O cadastro público cria somente Jovens.
+- Uma conta Jovem não consegue abrir funções exclusivas da Gestão/ADMIN.
+- Gestão vê a lista de jovens com atividade recente.
+- Enviar uma pesquisa e confirmar que ela aparece no painel e continua no banco Supabase.
+
+NOTAS
+-----
+- O plano gratuito do Render pode suspender o serviço após inatividade; o primeiro acesso
+  seguinte pode demorar enquanto a API volta a iniciar.
+- A interface hospedada no GitHub Pages é pública; autenticação e permissões são aplicadas
+  pela API do Render. Nunca coloque credenciais administrativas dentro do frontend.
+- Mantenha backups do banco Supabase e teste primeiro qualquer mudança estrutural importante.
+
+Referências oficiais:
+- Prisma ORM 6 + Supabase: https://www.prisma.io/docs/orm/v6/overview/databases/supabase
+- Render Web Services: https://render.com/docs/web-services
+- Variáveis de ambiente do Render: https://render.com/docs/configure-environment-variables
+- GitHub Pages: https://docs.github.com/en/pages

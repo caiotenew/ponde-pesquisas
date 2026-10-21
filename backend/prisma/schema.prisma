@@ -23,10 +23,13 @@ model User {
   ativo      Boolean    @default(true)
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
+  lastSeenAt DateTime?
+  mustChangePassword Boolean @default(false)
   pesquisas  Pesquisa[]
 
   @@index([role])
   @@index([ativo])
+  @@index([role, ativo, lastSeenAt])
 }
 
 model Pesquisa {

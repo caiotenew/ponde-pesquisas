@@ -12,6 +12,10 @@ async function auth(req, res, next) {
     if (!user || !user.ativo) return res.status(401).json({ error: 'Sessão inválida ou usuário inativo.' });
 
     req.user = user;
+    const allowedDuringPasswordReset = ['/me', '/change-password', '/logout'].includes(req.path);
+    if (user.mustChangePassword && !allowedDuringPasswordReset) {
+      return res.status(428).json({ error: 'Antes de continuar, altere sua senha temporária.', code: 'PASSWORD_CHANGE_REQUIRED' });
+    }
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Token inválido ou expirado.' });

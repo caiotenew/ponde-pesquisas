@@ -3,11 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0f172a">
-  <title>Multicentro Adriano Pondé — Pesquisa de Satisfação</title>
+  <meta name="theme-color" content="#123b5d">
+  <meta name="description" content="Portal interno de pesquisa de satisfação do Multicentro de Saúde Adriano Pondé — Instituto Provida.">
+  <title>Pesquisa de Satisfação — Multicentro Adriano Pondé | Instituto Provida</title>
   <link rel="icon" href="assets/Logo_provida.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    /* Paleta Provida: o "cyan" do Tailwind passa a ser o verde-água da logo e o "slate" escuro vira o azul-marinho institucional. */
+    tailwind.config = {
+      theme: { extend: {
+        fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'] },
+        colors: {
+          cyan:  { 50:'#effbfa', 100:'#d4f5f2', 200:'#a9ebe5', 300:'#6fdcd4', 400:'#2ec6bc', 500:'#0fb0a6', 600:'#089a97', 700:'#087f86', 800:'#0a656c', 900:'#0e4d57' },
+          slate: { 800:'#1b4258', 900:'#14344b', 950:'#102d46' }
+        }
+      } }
+    };
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="js/theme.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -15,32 +32,103 @@
   <div id="toast-root" class="fixed right-4 top-4 z-[100] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2"></div>
 
   <!-- Login -->
-  <main id="screen-login" class="min-h-screen p-4 sm:p-6 lg:p-10 flex items-center justify-center bg-gradient-to-br from-slate-100 via-white to-cyan-50">
-    <section class="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-xl sm:p-8">
-      <div class="mb-7 text-center">
-        <img src="assets/Logo_provida.png" alt="Logo" class="mx-auto mb-4 h-20 w-20 object-contain">
-        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-600">Pesquisa de Satisfação</p>
-        <h1 class="mt-2 text-xl font-bold text-slate-900">Multicentro Adriano Pondé</h1>
-        <p class="mt-1 text-sm text-slate-500">Portal interno de coleta e gestão</p>
-      </div>
-      <form id="login-form" class="space-y-4">
-        <div>
-          <label for="login-email" class="mb-1.5 block text-sm font-semibold text-slate-700">E-mail corporativo</label>
-          <input id="login-email" type="email" autocomplete="username" required class="field" placeholder="seu.email@empresa.com">
+  <div id="screen-login" class="auth-shell">
+    <header class="institutional-header">
+      <a class="brand-lockup" href="https://www.providaos.org.br/provida/" target="_blank" rel="noopener noreferrer" aria-label="Instituto Provida — site oficial">
+        <img src="assets/Logo_provida.png" alt="Logo do Instituto Provida" class="brand-logo">
+        <span class="brand-copy">
+          <strong>Instituto Provida</strong>
+          <span>Multicentro de Saúde Adriano Pondé</span>
+          <small>Pesquisa de Satisfação de Usuários</small>
+        </span>
+      </a>
+      <span class="internal-label"><i data-lucide="shield-check" aria-hidden="true"></i> Ambiente interno</span>
+    </header>
+
+    <main class="auth-main">
+      <section class="auth-card" aria-labelledby="login-title">
+        <div class="auth-heading-block">
+          <div class="heading-symbol"><i data-lucide="lock-keyhole" aria-hidden="true"></i></div>
+          <h1 id="login-title">Acesse o portal</h1>
+          <p id="login-description">Entre com seu e-mail e senha para acessar o portal.</p>
         </div>
-        <div>
-          <label for="login-senha" class="mb-1.5 block text-sm font-semibold text-slate-700">Senha</label>
-          <div class="relative">
-            <input id="login-senha" type="password" autocomplete="current-password" required class="field pr-12" placeholder="••••••••">
-            <button id="toggle-login-password" type="button" class="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-slate-400 hover:text-slate-700" aria-label="Mostrar senha">
-              <i data-lucide="eye" class="h-4 w-4"></i>
-            </button>
+        <form id="login-form" class="form-stack" novalidate>
+          <div class="field-group">
+            <label for="login-email">E-mail <span aria-hidden="true">*</span></label>
+            <div class="input-frame">
+              <i data-lucide="mail" aria-hidden="true"></i>
+              <input id="login-email" type="email" autocomplete="username" required placeholder="seu.email@empresa.com">
+            </div>
           </div>
+          <div class="field-group">
+            <label for="login-senha">Senha <span aria-hidden="true">*</span></label>
+            <div class="input-frame">
+              <i data-lucide="key-round" aria-hidden="true"></i>
+              <input id="login-senha" type="password" autocomplete="current-password" required placeholder="••••••••">
+              <button id="toggle-login-password" type="button" class="password-toggle" aria-label="Mostrar senha"><i data-lucide="eye" aria-hidden="true"></i></button>
+            </div>
+          </div>
+          <button id="login-btn" type="submit" class="primary-button">Entrar no portal</button>
+        </form>
+        <form id="signup-form" class="form-stack hidden" novalidate>
+          <div class="field-group">
+            <label for="signup-name">Nome completo <span aria-hidden="true">*</span></label>
+            <div class="input-frame"><i data-lucide="user-round" aria-hidden="true"></i><input id="signup-name" type="text" autocomplete="name" required maxlength="120" placeholder="Seu nome completo"></div>
+          </div>
+          <div id="signup-standard-fields" class="form-stack">
+            <div class="field-group">
+              <label for="signup-email">E-mail <span aria-hidden="true">*</span></label>
+              <div class="input-frame"><i data-lucide="mail" aria-hidden="true"></i><input id="signup-email" type="email" autocomplete="email" required maxlength="254" placeholder="seu.email@exemplo.com"></div>
+            </div>
+            <div class="field-group">
+              <label for="signup-password">Senha <span aria-hidden="true">*</span></label>
+              <div class="input-frame"><i data-lucide="key-round" aria-hidden="true"></i><input id="signup-password" type="password" autocomplete="new-password" required minlength="8" maxlength="72" placeholder="Mínimo de 8 caracteres"></div>
+            </div>
+            <div class="field-group">
+              <label for="signup-password-confirm">Confirmar senha <span aria-hidden="true">*</span></label>
+              <div class="input-frame"><i data-lucide="shield-check" aria-hidden="true"></i><input id="signup-password-confirm" type="password" autocomplete="new-password" required minlength="8" maxlength="72" placeholder="Digite a senha novamente"></div>
+            </div>
+            <div class="signup-guidance" role="note">
+              <i data-lucide="info" aria-hidden="true"></i>
+              <p>Este formulário cria uma conta de <strong>Jovem Aprendiz</strong>. Acesso de Gestão não é liberado por cadastro público: o administrador cria e autoriza essas contas.</p>
+            </div>
+          </div>
+          <div id="signup-admin-note" class="hidden rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+            <div class="font-bold">Configuração inicial do administrador</div>
+            <p class="mt-1">A primeira conta administrativa é definida pelo sistema e só pode ser criada uma vez.</p>
+            <p class="mt-2 text-xs">Para concluir esta etapa, informe a chave privada de configuração cadastrada nas variáveis de ambiente do Render. Essa chave não deve ser compartilhada nem salva no GitHub.</p>
+            <div id="signup-admin-key-container" class="mt-3">
+              <label for="signup-admin-key" class="mb-1 block text-xs font-bold">Chave de configuração</label>
+              <input id="signup-admin-key" type="password" minlength="32" maxlength="256" autocomplete="off" class="field" placeholder="Cole a chave ADMIN_SETUP_KEY" required>
+            </div>
+            <p id="signup-admin-unconfigured" class="mt-2 hidden text-xs font-semibold text-rose-700">O backend ainda está com a chave de exemplo. Defina uma ADMIN_SETUP_KEY segura e reinicie/publice a API antes de criar o administrador.</p>
+          </div>
+          <button id="signup-submit" type="submit" class="primary-button">Criar conta</button>
+          <button id="signup-back-btn" type="button" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Voltar para entrar</button>
+        </form>
+        <button id="auth-mode-toggle" type="button" class="mt-4 w-full rounded-xl border border-cyan-100 bg-cyan-50 px-4 py-3 text-sm font-bold text-cyan-800 transition hover:bg-cyan-100">Criar conta</button>
+        <div id="auth-access-note" class="auth-access-note" role="note">
+          <i data-lucide="info" aria-hidden="true"></i>
+          <p>Novo acesso de Jovem Aprendiz? Use o botão abaixo. <strong>Contas de Gestão são criadas exclusivamente pelo administrador.</strong></p>
         </div>
-        <button id="login-btn" type="submit" class="btn-primary w-full">Entrar no portal</button>
-      </form>
-    </section>
-  </main>
+      </section>
+    </main>
+
+    <footer class="institutional-footer">
+      <div class="footer-primary">
+        <div class="footer-identity"><strong>Instituto Provida</strong><span>Instituto de Gestão Social e Inovação Público Privado</span><small>CNPJ: 07.466.228/0001-10</small></div>
+        <div class="footer-contact">
+          <a href="mailto:atendimento@providaos.org.br"><i data-lucide="mail" aria-hidden="true"></i> atendimento@providaos.org.br</a>
+          <a href="tel:+557121060010"><i data-lucide="phone" aria-hidden="true"></i> (71) 2106-0010</a>
+        </div>
+        <div class="footer-address"><i data-lucide="map-pin" aria-hidden="true"></i><span>Rua Maria Isabel dos Santos, nº 332, Centro<br>Lauro de Freitas – BA, CEP 42702-440</span></div>
+      </div>
+      <div class="footer-bottom">
+        <span>Sistema interno de coleta e acompanhamento de pesquisas de satisfação.</span>
+        <a href="https://www.providaos.org.br/provida/" target="_blank" rel="noopener noreferrer">Site oficial do Instituto Provida <i data-lucide="external-link" aria-hidden="true"></i></a>
+      </div>
+    </footer>
+  </div>
 
   <!-- App -->
   <div id="screen-app" class="hidden min-h-screen md:flex">
@@ -67,7 +155,10 @@
         </div>
         <nav id="nav" class="space-y-2"></nav>
       </div>
-      <button id="logout-btn" class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-rose-300 hover:bg-slate-900"><i data-lucide="log-out" class="h-4 w-4"></i>Sair</button>
+      <div class="space-y-2">
+        <button id="change-password-open" class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-200 hover:bg-slate-900"><i data-lucide="key-round" class="h-4 w-4"></i>Alterar minha senha</button>
+        <button id="logout-btn" class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-rose-300 hover:bg-slate-900"><i data-lucide="log-out" class="h-4 w-4"></i>Sair</button>
+      </div>
     </aside>
 
     <main class="min-w-0 flex-1 overflow-y-auto pt-20 md:pt-0">
@@ -88,6 +179,17 @@
               <a id="metabase-btn" href="#" target="_blank" rel="noopener noreferrer" class="hidden btn-light"><i data-lucide="external-link" class="h-4 w-4"></i>Metabase</a>
             </div>
           </div>
+
+          <article class="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div class="flex items-start gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><i data-lucide="radio-tower" class="h-5 w-5"></i></div>
+                <div><h3 class="font-bold text-slate-900">Jovens online agora</h3><p class="mt-1 text-xs text-slate-500">Presença atualizada automaticamente enquanto a sessão estiver ativa.</p></div>
+              </div>
+              <span id="online-count" class="inline-flex w-fit items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-800"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>0 online</span>
+            </div>
+            <div id="online-youngs-list" class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3"><p class="text-sm text-slate-400">Carregando presença...</p></div>
+          </article>
 
           <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -283,21 +385,39 @@
         <!-- Admin -->
         <section id="view-admin" class="view hidden space-y-6">
           <div class="border-b border-slate-200 pb-5"><p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-600">Manutenção</p><h2 class="mt-1 text-2xl font-bold text-slate-900">Gerenciar usuários</h2><p class="mt-1 text-sm text-slate-500">Adicione ou remova contas de Gestão e Jovem Aprendiz. O administrador principal não é removível.</p></div>
+          <div class="rounded-2xl border border-cyan-100 bg-cyan-50 p-4 text-sm leading-6 text-slate-700">
+            <div class="flex items-start gap-3"><i data-lucide="key-round" class="mt-0.5 h-5 w-5 shrink-0 text-cyan-700" aria-hidden="true"></i><div><strong class="text-slate-900">Como liberar acesso para a Gestão</strong><p class="mt-1">Crie a conta aqui, selecione o perfil <strong>Gestão</strong> e defina uma senha temporária. Entregue os dados diretamente à pessoa, por um canal privado. No primeiro login, ela será obrigada a criar uma nova senha. O sistema não envia convite por e-mail automaticamente.</p></div></div>
+          </div>
           <div class="grid gap-6 lg:grid-cols-[360px_1fr]">
-            <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 class="font-semibold text-slate-900">Novo usuário</h3><p class="mt-1 text-xs text-slate-500">Somente Gestão e Jovem Aprendiz.</p>
+            <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><h3 class="font-semibold text-slate-900">Novo usuário</h3><p class="mt-1 text-xs text-slate-500">Crie contas de Gestão ou Jovem Aprendiz.</p>
               <form id="user-form" class="mt-5 space-y-4">
                 <div><label for="user-name-input" class="label">Nome</label><input id="user-name-input" class="field" required></div>
                 <div><label for="user-email-input" class="label">E-mail</label><input id="user-email-input" type="email" class="field" required></div>
-                <div><label for="user-password-input" class="label">Senha</label><input id="user-password-input" type="password" minlength="6" class="field" required></div>
+                <div><label for="user-password-input" class="label">Senha inicial</label><input id="user-password-input" type="password" minlength="8" maxlength="72" class="field" autocomplete="new-password" required><p class="mt-1 text-xs text-slate-400">Use pelo menos 8 caracteres. A troca será solicitada no primeiro acesso.</p></div>
                 <div><label for="user-role-input" class="label">Perfil</label><select id="user-role-input" class="field"><option value="JOVEM">Jovem Aprendiz</option><option value="GESTAO">Gestão</option></select></div>
                 <button class="btn-dark w-full" type="submit">Criar usuário</button>
               </form>
             </article>
-            <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div class="border-b border-slate-100 p-4"><h3 class="font-semibold text-slate-900">Acessos cadastrados</h3></div><div class="overflow-x-auto"><table class="min-w-full text-left text-sm"><thead class="bg-slate-50 text-xs uppercase text-slate-400"><tr><th class="px-4 py-3">Nome</th><th class="px-4 py-3">E-mail</th><th class="px-4 py-3">Perfil</th><th class="px-4 py-3">Status</th><th class="px-4 py-3"></th></tr></thead><tbody id="table-admin-users" class="divide-y divide-slate-100"></tbody></table></div></article>
+            <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div class="border-b border-slate-100 p-4"><h3 class="font-semibold text-slate-900">Acessos cadastrados</h3></div><div class="overflow-x-auto"><table class="min-w-full text-left text-sm"><thead class="bg-slate-50 text-xs uppercase text-slate-400"><tr><th class="px-4 py-3">Nome</th><th class="px-4 py-3">E-mail</th><th class="px-4 py-3">Perfil</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Última presença</th><th class="px-4 py-3">Ações</th></tr></thead><tbody id="table-admin-users" class="divide-y divide-slate-100"></tbody></table></div></article>
           </div>
         </section>
       </div>
     </main>
+  </div>
+
+  <!-- Modal de segurança / troca de senha -->
+  <div id="change-password-modal" class="fixed inset-0 z-[95] hidden items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="change-password-title">
+    <div class="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+      <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700"><i data-lucide="shield-check" class="h-6 w-6"></i></div>
+      <h3 id="change-password-title" class="text-xl font-bold text-slate-900">Alterar minha senha</h3>
+      <p class="mt-1 text-sm leading-5 text-slate-500">Escolha uma senha com no mínimo 8 caracteres. A senha atual será solicitada para confirmar a alteração.</p>
+      <form id="change-password-form" class="mt-5 space-y-4">
+        <div><label for="password-current" class="label">Senha atual</label><input id="password-current" type="password" autocomplete="current-password" class="field" required></div>
+        <div><label for="password-new" class="label">Nova senha</label><input id="password-new" type="password" autocomplete="new-password" minlength="8" maxlength="72" class="field" required></div>
+        <div><label for="password-confirm" class="label">Confirmar nova senha</label><input id="password-confirm" type="password" autocomplete="new-password" minlength="8" maxlength="72" class="field" required></div>
+        <div class="grid grid-cols-2 gap-3"><button id="change-password-cancel" type="button" class="btn-light">Cancelar</button><button type="submit" class="btn-primary">Salvar senha</button></div>
+      </form>
+    </div>
   </div>
 
   <!-- Modal envio -->

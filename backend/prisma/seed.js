@@ -5,29 +5,19 @@ require('dotenv').config();
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = (process.env.ADMIN_EMAIL || 'damascenocaio311@gmail.com').trim().toLowerCase();
-  const password = String(process.env.ADMIN_PASSWORD || '').trim();
-  if (!password) throw new Error('ADMIN_PASSWORD não foi definido no ambiente. Configure-o antes de executar o seed.');
-  const passwordHash = await bcrypt.hash(password, 12);
+  const existingUsers = await prisma.user.count();
+  if (existingUsers > 0) {
+    console.log(`Seed ignorado: o banco já possui ${existingUsers} usuário(s). Nenhuma conta ou senha foi alterada.`);
+    return;
+  }
 
-  await prisma.user.upsert({
-    where: { email },
-    update: {
-      nome: 'Caio Damasceno',
-      senhaHash: passwordHash,
-      role: 'ADMIN',
-      ativo: true
-    },
-    create: {
-      nome: 'Caio Damasceno',
-      email,
-      senhaHash: passwordHash,
-      role: 'ADMIN',
-      ativo: true
-    }
+  const email = String(process.env.ADMIN_EMAIL || 'damascenocaio311@gmail.com').trim().toLowerCase();
+  const password = String(process.env.ADMIN_PASSWORD || '1234');
+  const senhaHash = await bcrypt.hash(password, 12);
+  await prisma.user.create({
+    data: { nome: 'Caio Damasceno', email, senhaHash, role: 'ADMIN', ativo: true, mustChangePassword: true }
   });
-
-  console.log('Seed concluído com sucesso.');
+  console.log('Administrador inicial criado. Altere a senha temporária no primeiro acesso.');
 }
 
 main()
