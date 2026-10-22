@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  GESTAO
+  JOVEM
+}
+
+enum UserStatus {
+  ATIVO
+  PENDENTE
+  INATIVO
+  RECUSADO
+}
+
+model User {
+  id                 Int        @id @default(autoincrement())
+  nome               String
+  email              String     @unique
+  senhaHash          String
+  role               Role       @default(JOVEM)
+  // "status" é a fonte de verdade do acesso. "ativo" é mantido em sincronia (ativo = status ATIVO)
+  // apenas por compatibilidade com consultas antigas.
+  status             UserStatus @default(ATIVO)
+  ativo              Boolean    @default(true)
+  cargo              String?
+  justificativa      String?
+  mustChangePassword Boolean    @default(false)
+  passwordChangedAt  DateTime?
+  resetRequestedAt   DateTime?
+  lastLoginAt        DateTime?
+  lastSeenAt         DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  pesquisas          Pesquisa[]
+
+  @@index([role])
+  @@index([ativo])
+  @@index([status])
+  @@index([lastSeenAt])
+}
+
+model Pesquisa {
+  id            Int      @id @default(autoincrement())
+  data          DateTime
+  nome          String?
+  p1            String
+  p2            String
+  p3            String
+  p4            String
+  p5            String
+  feedback      String?
+  contato       String?
+  collectedById Int
+  createdAt     DateTime @default(now())
+  collectedBy   User     @relation(fields: [collectedById], references: [id], onDelete: Restrict)
+
+  @@index([data])
+  @@index([collectedById, data])
+  @@index([createdAt])
+}
